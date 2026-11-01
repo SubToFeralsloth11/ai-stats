@@ -14,22 +14,30 @@
     margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg);
     font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  main { max-width: 1000px; margin: 0 auto; }
+  main { max-width: 1100px; margin: 0 auto; }
   h1 { margin: 0 0 4px; font-size: 28px; }
-  .sub { color: var(--muted); margin: 0 0 28px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  nav button {
+    background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 16px; font: inherit; cursor: pointer;
+  }
+  nav button:hover { color: var(--fg); }
+  nav button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .desc { color: var(--muted); margin: 12px 0 20px; }
   section {
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
     padding: 20px; margin-bottom: 20px;
   }
   h2 { margin: 0 0 14px; font-size: 20px; }
-  h2 span { color: var(--accent); }
   .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
   th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
   tr:last-child td { border-bottom: none; }
   td.level { font-weight: 600; text-transform: capitalize; }
   td.empty { color: var(--muted); }
+  a { color: var(--accent); }
   footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
 </style>
 </head>
@@ -37,94 +45,139 @@
 <main>
   <h1>AI Stats</h1>
   <p class="sub">Model comparison by effort level.</p>
+  <nav id="tabs" role="tablist"></nav>
+  <p class="desc" id="desc"></p>
   <div id="models"></div>
   <footer>Empty cells show "—" until data is added.</footer>
 </main>
 
 <script>
   // ===== EDIT DATA HERE =====
-  // Fill in any value below. Leave it as null to show "—".
-  const COLUMNS = ["Score", "Speed (tok/s)", "Time to first token (s)", "Cost ($/1M tokens)", "Notes"];
+  // Each tab has its own columns and its own data.
+  // Fill in a row in the same order as that tab's columns. Leave a value as null to show "—".
+  // In the "Result" column, put a link (e.g. "results/flappy-bird/opus-high.html"
+  // or any https:// URL) and it becomes a clickable "View result" link.
 
+  const MODEL_NAMES = ["Claude Opus 5.5", "Claude Haiku 5.5", "Nemotron 3 Free Ultra"];
   const LEVELS = ["low", "medium", "high", "xhigh", "max"];
 
-  const emptyRow = () => COLUMNS.map(() => null);
+  const BUILD_COLUMNS = ["Time to build", "Worked first try?", "Fix attempts", "Tokens used", "Cost ($)", "Quality (1-10)", "Result"];
 
-  const MODELS = [
+  const TABS = [
     {
-      name: "Claude Opus 5.5",
+      id: "general",
+      title: "General stats",
+      description: "Overall speed, cost and score for each model and effort level.",
+      columns: ["Score", "Speed (tok/s)", "Time to first token (s)", "Cost ($/1M tokens)", "Notes"],
       data: {
-        low:    emptyRow(),
-        medium: emptyRow(),
-        high:   emptyRow(),
-        xhigh:  emptyRow(),
-        max:    emptyRow(),
+        "Claude Opus 5.5":       { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Claude Haiku 5.5":      { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Nemotron 3 Free Ultra": { low: null, medium: null, high: null, xhigh: null, max: null },
       },
     },
     {
-      name: "Claude Haiku 5.5",
+      id: "flappy-bird",
+      title: "Flappy Bird",
+      description: "How fast each model builds a working Flappy Bird clone.",
+      columns: BUILD_COLUMNS,
       data: {
-        low:    emptyRow(),
-        medium: emptyRow(),
-        high:   emptyRow(),
-        xhigh:  emptyRow(),
-        max:    emptyRow(),
+        "Claude Opus 5.5":       { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Claude Haiku 5.5":      { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Nemotron 3 Free Ultra": { low: null, medium: null, high: null, xhigh: null, max: null },
       },
     },
     {
-      name: "Nemotron 3 Free Ultra",
+      id: "button-game",
+      title: "Button game",
+      description: "How fast each model builds a simple button game.",
+      columns: BUILD_COLUMNS,
       data: {
-        low:    emptyRow(),
-        medium: emptyRow(),
-        high:   emptyRow(),
-        xhigh:  emptyRow(),
-        max:    emptyRow(),
+        "Claude Opus 5.5":       { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Claude Haiku 5.5":      { low: null, medium: null, high: null, xhigh: null, max: null },
+        "Nemotron 3 Free Ultra": { low: null, medium: null, high: null, xhigh: null, max: null },
       },
     },
   ];
-  // Example of filled data:  high: [92, 45, 1.2, 15, "Best overall"],
+  // Example of a filled row on the Flappy Bird tab:
+  //   high: ["4m 12s", "Yes", 0, 18000, 0.27, 8, "results/flappy-bird/opus-high.html"],
   // ===== END DATA =====
 
-  const root = document.getElementById("models");
-  for (const model of MODELS) {
-    const section = document.createElement("section");
-    const h2 = document.createElement("h2");
-    h2.textContent = model.name;
-    section.appendChild(h2);
+  const tabsEl = document.getElementById("tabs");
+  const descEl = document.getElementById("desc");
+  const modelsEl = document.getElementById("models");
 
-    const scroll = document.createElement("div");
-    scroll.className = "scroll";
-    const table = document.createElement("table");
-    const headRow = table.createTHead().insertRow();
-    for (const label of ["Effort", ...COLUMNS]) {
-      const th = document.createElement("th");
-      th.textContent = label;
-      headRow.appendChild(th);
+  const isLink = (v) => typeof v === "string" && /^(https?:\/\/|results\/|\.{0,2}\/)/.test(v);
+
+  function renderCell(cell, value) {
+    if (value === null || value === undefined || value === "") {
+      cell.textContent = "—";
+      cell.className = "empty";
+    } else if (isLink(value)) {
+      const a = document.createElement("a");
+      a.href = value;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = "View result";
+      cell.appendChild(a);
+    } else {
+      cell.textContent = value;
     }
-
-    const body = table.createTBody();
-    for (const level of LEVELS) {
-      const row = body.insertRow();
-      const levelCell = row.insertCell();
-      levelCell.className = "level";
-      levelCell.textContent = level;
-      const values = model.data[level] || emptyRow();
-      COLUMNS.forEach((_, i) => {
-        const cell = row.insertCell();
-        const v = values[i];
-        if (v === null || v === undefined || v === "") {
-          cell.textContent = "—";
-          cell.className = "empty";
-        } else {
-          cell.textContent = v;
-        }
-      });
-    }
-
-    scroll.appendChild(table);
-    section.appendChild(scroll);
-    root.appendChild(section);
   }
+
+  function renderTab(tab) {
+    descEl.textContent = tab.description;
+    modelsEl.replaceChildren();
+    for (const name of MODEL_NAMES) {
+      const section = document.createElement("section");
+      const h2 = document.createElement("h2");
+      h2.textContent = name;
+      section.appendChild(h2);
+
+      const scroll = document.createElement("div");
+      scroll.className = "scroll";
+      const table = document.createElement("table");
+      const headRow = table.createTHead().insertRow();
+      for (const label of ["Effort", ...tab.columns]) {
+        const th = document.createElement("th");
+        th.textContent = label;
+        headRow.appendChild(th);
+      }
+
+      const body = table.createTBody();
+      const modelData = tab.data[name] || {};
+      for (const level of LEVELS) {
+        const row = body.insertRow();
+        const levelCell = row.insertCell();
+        levelCell.className = "level";
+        levelCell.textContent = level;
+        const values = modelData[level] || [];
+        tab.columns.forEach((_, i) => renderCell(row.insertCell(), values[i]));
+      }
+
+      scroll.appendChild(table);
+      section.appendChild(scroll);
+      modelsEl.appendChild(section);
+    }
+    for (const btn of tabsEl.children) {
+      btn.setAttribute("aria-selected", String(btn.dataset.id === tab.id));
+    }
+  }
+
+  function showFromHash() {
+    const id = location.hash.slice(1);
+    renderTab(TABS.find((t) => t.id === id) || TABS[0]);
+  }
+
+  for (const tab of TABS) {
+    const btn = document.createElement("button");
+    btn.role = "tab";
+    btn.dataset.id = tab.id;
+    btn.textContent = tab.title;
+    btn.addEventListener("click", () => { location.hash = tab.id; });
+    tabsEl.appendChild(btn);
+  }
+  window.addEventListener("hashchange", showFromHash);
+  showFromHash();
 </script>
 </body>
 </html>
