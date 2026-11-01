@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button Game</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #1e2233;
+    color: #f2f2f2;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+  header {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    padding: 0.8rem 1rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    background: #151827;
+  }
+  header span span { color: #ffd166; font-variant-numeric: tabular-nums; }
+  #arena {
+    position: relative;
+    flex: 1;
+    margin: 1rem;
+    border-radius: 12px;
+    background: #2a2f45;
+    overflow: hidden;
+  }
+  #target {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: none;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff8a8a, #e63946);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    touch-action: manipulation;
+  }
+  #target:active { transform: scale(0.92); }
+  .panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 1rem;
+  }
+  .panel h1 { margin: 0; font-size: 2.2rem; }
+  .panel p { margin: 0; font-size: 1.2rem; color: #c9cbe0; }
+  #finalScore { font-size: 3rem; font-weight: 800; color: #ffd166; }
+  .big {
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 0.8rem 2.2rem;
+    border: none;
+    border-radius: 10px;
+    background: #06d6a0;
+    color: #10302a;
+    cursor: pointer;
+  }
+  .big:hover { background: #2ee8b6; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <header>
+    <span>Score: <span id="score">0</span></span>
+    <span>Time: <span id="time">30</span>s</span>
+  </header>
+  <main id="arena">
+    <div id="startPanel" class="panel">
+      <h1>Button Game</h1>
+      <p>Click the target as many times as you can in 30 seconds.</p>
+      <button id="startBtn" class="big" type="button">Start</button>
+    </div>
+    <div id="overPanel" class="panel" hidden>
+      <h1>Time's up!</h1>
+      <p>Final score</p>
+      <div id="finalScore">0</div>
+      <button id="againBtn" class="big" type="button">Play again</button>
+    </div>
+    <button id="target" type="button" hidden>Click!</button>
+  </main>
+
+<script>
+(function () {
+  var ROUND_SECONDS = 30;
+
+  var arena = document.getElementById("arena");
+  var target = document.getElementById("target");
+  var scoreEl = document.getElementById("score");
+  var timeEl = document.getElementById("time");
+  var startPanel = document.getElementById("startPanel");
+  var overPanel = document.getElementById("overPanel");
+  var finalScoreEl = document.getElementById("finalScore");
+  var startBtn = document.getElementById("startBtn");
+  var againBtn = document.getElementById("againBtn");
+
+  var score = 0;
+  var endTime = 0;
+  var timerId = null;
+  var running = false;
+
+  function moveTarget() {
+    var maxX = Math.max(0, arena.clientWidth - target.offsetWidth);
+    var maxY = Math.max(0, arena.clientHeight - target.offsetHeight);
+    target.style.left = Math.floor(Math.random() * (maxX + 1)) + "px";
+    target.style.top = Math.floor(Math.random() * (maxY + 1)) + "px";
+  }
+
+  function updateTime() {
+    var msLeft = endTime - Date.now();
+    var secondsLeft = Math.max(0, Math.ceil(msLeft / 1000));
+    timeEl.textContent = secondsLeft;
+    if (msLeft <= 0) endRound();
+  }
+
+  function startRound() {
+    score = 0;
+    scoreEl.textContent = score;
+    timeEl.textContent = ROUND_SECONDS;
+    startPanel.hidden = true;
+    overPanel.hidden = true;
+    target.hidden = false;
+    moveTarget();
+    running = true;
+    endTime = Date.now() + ROUND_SECONDS * 1000;
+    clearInterval(timerId);
+    timerId = setInterval(updateTime, 100);
+  }
+
+  function endRound() {
+    if (!running) return;
+    running = false;
+    clearInterval(timerId);
+    timerId = null;
+    timeEl.textContent = 0;
+    target.hidden = true;
+    finalScoreEl.textContent = score;
+    overPanel.hidden = false;
+    againBtn.focus();
+  }
+
+  target.addEventListener("click", function () {
+    if (!running) return;
+    score += 1;
+    scoreEl.textContent = score;
+    moveTarget();
+  });
+
+  startBtn.addEventListener("click", startRound);
+  againBtn.addEventListener("click", startRound);
+
+  window.addEventListener("resize", function () {
+    if (running) moveTarget();
+  });
+})();
+</script>
+</body>
+</html>

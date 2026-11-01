@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Button Game</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #1e1e2e;
+    color: #f5f5f5;
+    overflow: hidden;
+  }
+  #hud {
+    position: absolute;
+    top: 12px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 22px;
+  }
+  #arena {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  #center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  #center p {
+    font-size: 28px;
+    margin: 0 0 16px 0;
+  }
+  button.main {
+    font-size: 22px;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    background: #4caf50;
+    color: #fff;
+    cursor: pointer;
+  }
+  button.main:hover { background: #43a047; }
+  #target {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border: none;
+    border-radius: 50%;
+    background: #ff5252;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: none;
+    user-select: none;
+  }
+  #target:active { background: #e53935; }
+</style>
+</head>
+<body>
+<div id="hud">
+  Score: <span id="score">0</span> &nbsp;|&nbsp; Time: <span id="time">30</span>s
+</div>
+<div id="arena">
+  <div id="center">
+    <p id="message">Click Start to play!</p>
+    <button class="main" id="actionBtn">Start</button>
+  </div>
+  <button id="target">HIT!</button>
+</div>
+<script>
+  const ROUND_SECONDS = 30;
+  const scoreEl = document.getElementById('score');
+  const timeEl = document.getElementById('time');
+  const messageEl = document.getElementById('message');
+  const actionBtn = document.getElementById('actionBtn');
+  const arena = document.getElementById('arena');
+  const target = document.getElementById('target');
+  const center = document.getElementById('center');
+
+  let score = 0;
+  let timeLeft = ROUND_SECONDS;
+  let timerId = null;
+
+  function randomPosition() {
+    const pad = 10;
+    const maxX = Math.max(pad, arena.clientWidth - target.offsetWidth - pad);
+    const maxY = Math.max(pad, arena.clientHeight - target.offsetHeight - pad);
+    const x = pad + Math.random() * (maxX - pad);
+    const y = pad + Math.random() * (maxY - pad);
+    target.style.left = Math.round(x) + 'px';
+    target.style.top = Math.round(y) + 'px';
+  }
+
+  function startRound() {
+    score = 0;
+    timeLeft = ROUND_SECONDS;
+    scoreEl.textContent = score;
+    timeEl.textContent = timeLeft;
+    center.style.display = 'none';
+    target.style.display = 'block';
+    randomPosition();
+    clearInterval(timerId);
+    timerId = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    timeLeft--;
+    timeEl.textContent = timeLeft;
+    if (timeLeft <= 0) {
+      endRound();
+    }
+  }
+
+  function endRound() {
+    clearInterval(timerId);
+    timerId = null;
+    target.style.display = 'none';
+    timeEl.textContent = 0;
+    messageEl.textContent = 'Time is up! Final score: ' + score;
+    actionBtn.textContent = 'Play again';
+    center.style.display = 'block';
+  }
+
+  target.addEventListener('click', () => {
+    if (timerId === null) return;
+    score++;
+    scoreEl.textContent = score;
+    randomPosition();
+  });
+
+  actionBtn.addEventListener('click', startRound);
+</script>
+</body>
+</html>

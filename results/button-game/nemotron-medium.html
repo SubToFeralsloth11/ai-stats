@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Button Click Game</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f0f0f0;
+  }
+  .game-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    height: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #333;
+    color: white;
+    font-size: 1.1rem;
+  }
+  .target-btn {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #e74c3c;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: transform 0.1s;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .target-btn:active { transform: scale(0.9); }
+  .target-btn.hidden { display: none; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-size: 1.2rem;
+  }
+  .overlay.hidden { display: none; }
+  .btn {
+    padding: 12px 32px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 4px;
+    background: #2c3e50;
+    color: white;
+    cursor: pointer;
+  }
+  .btn:hover { background: #1a252f; }
+  .final-score { font-size: 2rem; font-weight: bold; color: #2c3e50; }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <div class="hud">
+    <span>Score: <span id="score">0</span></span>
+    <span>Time: <span id="timer">30</span>s</span>
+  </div>
+  <button class="target-btn hidden" id="target" aria-label="Target button"></button>
+  <div class="overlay" id="startOverlay">
+    <p>Click Start to begin a 30-second round</p>
+    <button class="btn" id="startBtn">Start</button>
+  </div>
+  <div class="overlay hidden" id="gameOverOverlay">
+    <p>Time's up!</p>
+    <p class="final-score">Final Score: <span id="finalScore">0</span></p>
+    <button class="btn" id="playAgainBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+const target = document.getElementById('target');
+const scoreEl = document.getElementById('score');
+const timerEl = document.getElementById('timer');
+const finalScoreEl = document.getElementById('finalScore');
+const startOverlay = document.getElementById('startOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const startBtn = document.getElementById('startBtn');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+const container = document.querySelector('.game-container');
+const hud = document.querySelector('.hud');
+const HUD_HEIGHT = 48;
+const TARGET_SIZE = 60;
+const ROUND_DURATION = 30;
+
+let score = 0;
+let timeLeft = ROUND_DURATION;
+let timerId = null;
+let roundActive = false;
+
+function getContainerRect() {
+  const rect = container.getBoundingClientRect();
+  return {
+    left: rect.left + container.clientLeft,
+    top: rect.top + container.clientTop + HUD_HEIGHT,
+    width: rect.width,
+    height: rect.height - HUD_HEIGHT
+  };
+}
+
+function randomPosition() {
+  const area = getContainerRect();
+  const maxX = area.width - TARGET_SIZE;
+  const maxY = area.height - TARGET_SIZE;
+  const x = Math.random() * maxX;
+  const y = Math.random() * maxY;
+  return { x, y };
+}
+
+function moveTarget() {
+  const pos = randomPosition();
+  target.style.left = pos.x + 'px';
+  target.style.top = pos.y + 'px';
+}
+
+function updateTimer() {
+  timerEl.textContent = timeLeft;
+  if (timeLeft <= 0) {
+    endRound();
+  } else {
+    timeLeft--;
+  }
+}
+
+function startRound() {
+  score = 0;
+  timeLeft = ROUND_DURATION;
+  roundActive = true;
+  scoreEl.textContent = score;
+  timerEl.textContent = timeLeft;
+  startOverlay.classList.add('hidden');
+  gameOverOverlay.classList.add('hidden');
+  target.classList.remove('hidden');
+  moveTarget();
+  timerId = setInterval(updateTimer, 1000);
+}
+
+function endRound() {
+  roundActive = false;
+  clearInterval(timerId);
+  target.classList.add('hidden');
+  finalScoreEl.textContent = score;
+  gameOverOverlay.classList.remove('hidden');
+}
+
+target.addEventListener('click', (e) => {
+  if (!roundActive) return;
+  e.stopPropagation();
+  score++;
+  scoreEl.textContent = score;
+  moveTarget();
+});
+
+startBtn.addEventListener('click', startRound);
+playAgainBtn.addEventListener('click', startRound);
+
+window.addEventListener('resize', () => {
+  if (roundActive) moveTarget();
+});
+</script>
+</body>
+</html>

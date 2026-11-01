@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button Game</title>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #1e2230; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+  #hud { display: flex; justify-content: space-around; padding: 12px; font-size: 22px; background: #2b3045; }
+  #arena { position: relative; flex: 1; overflow: hidden; }
+  #target { position: absolute; width: 70px; height: 70px; border-radius: 50%; border: none; background: #ff5a5f; color: #fff; font-weight: bold; cursor: pointer; display: none; }
+  #panel { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  #panel button { font-size: 24px; padding: 12px 32px; border: none; border-radius: 8px; background: #4caf50; color: #fff; cursor: pointer; }
+  #message { font-size: 28px; }
+</style>
+</head>
+<body>
+<div id="hud"><div>Score: <span id="score">0</span></div><div>Time: <span id="time">30</span>s</div></div>
+<div id="arena">
+  <button id="target">Click!</button>
+  <div id="panel"><div id="message">Click the target as many times as you can in 30 seconds.</div><button id="start">Start</button></div>
+</div>
+<script>
+  const ROUND = 30;
+  const arena = document.getElementById('arena');
+  const target = document.getElementById('target');
+  const panel = document.getElementById('panel');
+  const startBtn = document.getElementById('start');
+  const msg = document.getElementById('message');
+  const scoreEl = document.getElementById('score');
+  const timeEl = document.getElementById('time');
+  let score = 0, endTime = 0, timer = null;
+
+  function moveTarget() {
+    const maxX = Math.max(0, arena.clientWidth - target.offsetWidth);
+    const maxY = Math.max(0, arena.clientHeight - target.offsetHeight);
+    target.style.left = Math.random() * maxX + 'px';
+    target.style.top = Math.random() * maxY + 'px';
+  }
+
+  function tick() {
+    const left = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    timeEl.textContent = left;
+    if (left <= 0) endRound();
+  }
+
+  function startRound() {
+    score = 0;
+    scoreEl.textContent = 0;
+    timeEl.textContent = ROUND;
+    panel.style.display = 'none';
+    target.style.display = 'block';
+    moveTarget();
+    endTime = Date.now() + ROUND * 1000;
+    timer = setInterval(tick, 100);
+  }
+
+  function endRound() {
+    clearInterval(timer);
+    target.style.display = 'none';
+    msg.textContent = 'Time\'s up! Final score: ' + score;
+    startBtn.textContent = 'Play again';
+    panel.style.display = 'flex';
+  }
+
+  target.addEventListener('click', () => {
+    if (Date.now() >= endTime) return;
+    score++;
+    scoreEl.textContent = score;
+    moveTarget();
+  });
+  startBtn.addEventListener('click', startRound);
+</script>
+</body>
+</html>

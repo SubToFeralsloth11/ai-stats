@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button Game</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #14161d;
+    color: #eef0f6;
+  }
+
+  .game {
+    width: 100%;
+    max-width: 900px;
+    padding: 16px;
+  }
+
+  .hud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .hud strong {
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .arena {
+    position: relative;
+    height: clamp(280px, 65vh, 600px);
+    overflow: hidden;
+    border: 2px solid #2f3445;
+    border-radius: 14px;
+    background: #1c1f2a;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation; /* no double-tap zoom while tapping fast */
+  }
+
+  /* --x/--y are 0..1 fractions of the free space, so the target stays fully inside the arena at any size. */
+  .target {
+    position: absolute;
+    left: calc(var(--x, 0.5) * 100%);
+    top: calc(var(--y, 0.5) * 100%);
+    transform: translate(calc(var(--x, 0.5) * -100%), calc(var(--y, 0.5) * -100%));
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle closest-side,
+      #e53935 0% 20%, #fff 20% 40%, #e53935 40% 60%, #fff 60% 80%, #e53935 80% 100%);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.45);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(10 12 18 / 0.6);
+    text-align: center;
+  }
+
+  .overlay h2 { margin: 0 0 8px; font-size: 2rem; }
+  .overlay p { margin: 0 0 20px; font-size: 1.1rem; color: #b4bacb; }
+  .overlay .final { font-size: 1.5rem; color: #eef0f6; }
+  .overlay .final strong { font-size: 2.5rem; font-variant-numeric: tabular-nums; }
+
+  .big {
+    padding: 12px 36px;
+    border: 0;
+    border-radius: 999px;
+    background: #4f8cff;
+    color: #fff;
+    font: inherit;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .big:hover:not(:disabled) { background: #3b78f0; }
+  .big:disabled { opacity: 0.5; cursor: default; }
+
+  button:focus-visible { outline: 3px solid #ffd54f; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main class="game">
+  <div class="hud">
+    <div>Score: <strong id="score">0</strong></div>
+    <div>Seconds left: <strong id="time">30</strong></div>
+  </div>
+
+  <div id="arena" class="arena">
+    <button id="target" class="target" type="button" aria-label="Target" hidden></button>
+
+    <div id="overlay" class="overlay">
+      <section id="intro">
+        <h2>Button Game</h2>
+        <p>Click the target as many times as you can in 30 seconds.</p>
+        <button id="start" class="big" type="button">Start</button>
+      </section>
+      <section id="results" hidden>
+        <h2>Time's up!</h2>
+        <p class="final">Final score: <strong id="final">0</strong></p>
+        <button id="again" class="big" type="button">Play again</button>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const ROUND_SECONDS = 30;
+  const REPLAY_DELAY_MS = 800; // keeps a leftover rapid click from instantly skipping the result screen
+
+  const $ = (id) => document.getElementById(id);
+  const arena = $('arena');
+  const target = $('target');
+  const overlay = $('overlay');
+  const intro = $('intro');
+  const results = $('results');
+  const againBtn = $('again');
+  const scoreEl = $('score');
+  const timeEl = $('time');
+  const finalEl = $('final');
+
+  let playing = false;
+  let score = 0;
+  let endTime = 0;
+  let ticker = 0;
+  let posX = 0.5; // current target position as 0..1 fractions, mirrored in --x/--y
+  let posY = 0.5;
+
+  function startRound() {
+    score = 0;
+    scoreEl.textContent = '0';
+    timeEl.textContent = String(ROUND_SECONDS);
+    overlay.hidden = true;
+    target.hidden = false; // must be rendered before moveTarget() measures it
+    moveTarget();
+    endTime = performance.now() + ROUND_SECONDS * 1000;
+    playing = true;
+    // Remaining time is always derived from the clock, so late ticks (e.g. background tab) can't stretch the round.
+    ticker = setInterval(tick, 100);
+  }
+
+  function tick() {
+    const msLeft = endTime - performance.now();
+    if (msLeft <= 0) {
+      endRound();
+    } else {
+      timeEl.textContent = String(Math.ceil(msLeft / 1000));
+    }
+  }
+
+  function endRound() {
+    playing = false;
+    clearInterval(ticker);
+    timeEl.textContent = '0';
+    target.hidden = true;
+    finalEl.textContent = String(score);
+    intro.hidden = true;
+    results.hidden = false;
+    overlay.hidden = false;
+    againBtn.disabled = true;
+    setTimeout(() => { againBtn.disabled = false; }, REPLAY_DELAY_MS);
+  }
+
+  function moveTarget() {
+    const w = target.offsetWidth;
+    const h = target.offsetHeight;
+    const freeW = arena.clientWidth - w;
+    const freeH = arena.clientHeight - h;
+    let x;
+    let y;
+    // Re-roll until the new spot doesn't overlap the old one, so every click is a real jump.
+    for (let i = 0; i < 50; i++) {
+      x = Math.random();
+      y = Math.random();
+      if (Math.abs(x - posX) * freeW >= w || Math.abs(y - posY) * freeH >= h) break;
+    }
+    posX = x;
+    posY = y;
+    target.style.setProperty('--x', x.toFixed(4));
+    target.style.setProperty('--y', y.toFixed(4));
+  }
+
+  target.addEventListener('click', () => {
+    if (!playing) return;
+    if (performance.now() >= endTime) { // time ran out between ticks: this click doesn't count
+      endRound();
+      return;
+    }
+    score += 1;
+    scoreEl.textContent = String(score);
+    moveTarget();
+  });
+
+  $('start').addEventListener('click', startRound);
+  againBtn.addEventListener('click', startRound);
+})();
+</script>
+</body>
+</html>

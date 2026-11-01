@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Button Click Game</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f0f0f0; padding: 20px; }
+  .game-container { text-align: center; }
+  h1 { margin-bottom: 1rem; color: #333; }
+  .stats { font-size: 1.5rem; margin-bottom: 1rem; color: #444; }
+  .stats span { font-weight: bold; color: #2196f3; }
+  #game-area { position: relative; width: 100%; max-width: 600px; height: 400px; background: white; border: 2px solid #ddd; border-radius: 8px; overflow: hidden; margin: 0 auto; }
+  button { font-size: 1.2rem; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; transition: transform 0.1s, background 0.1s; }
+  button:active { transform: scale(0.95); }
+  #start-btn, #restart-btn { background: #4caf50; color: white; }
+  #start-btn:hover, #restart-btn:hover { background: #45a049; }
+  #target-btn { position: absolute; background: #f44336; color: white; min-width: 80px; min-height: 40px; }
+  #target-btn:hover { background: #e53935; }
+  .hidden { display: none !important; }
+  .final-score { font-size: 2rem; margin-top: 1rem; color: #333; }
+  .final-score span { color: #f44336; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <h1>Click the Button!</h1>
+  <div class="stats">
+    Score: <span id="score">0</span> | Time: <span id="time">30</span>s
+  </div>
+  <div id="game-area">
+    <button id="target-btn" class="hidden">Click me!</button>
+  </div>
+  <button id="start-btn">Start</button>
+  <button id="restart-btn" class="hidden">Play again</button>
+  <div id="final-score" class="hidden final-score">Final score: <span id="final-score-value">0</span></div>
+</div>
+<script>
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const targetBtn = document.getElementById('target-btn');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const finalScoreEl = document.getElementById('final-score');
+const finalScoreValue = document.getElementById('final-score-value');
+const gameArea = document.getElementById('game-area');
+
+let score = 0;
+let timeLeft = 30;
+let timerId = null;
+let isPlaying = false;
+
+function getRandomPosition() {
+  const areaRect = gameArea.getBoundingClientRect();
+  const btnRect = targetBtn.getBoundingClientRect();
+  const maxX = areaRect.width - btnRect.width - 20;
+  const maxY = areaRect.height - btnRect.height - 20;
+  const x = Math.max(10, Math.random() * maxX);
+  const y = Math.max(10, Math.random() * maxY);
+  return { x, y };
+}
+
+function moveTarget() {
+  const pos = getRandomPosition();
+  targetBtn.style.left = pos.x + 'px';
+  targetBtn.style.top = pos.y + 'px';
+}
+
+function updateStats() {
+  scoreEl.textContent = score;
+  timeEl.textContent = timeLeft;
+}
+
+function startGame() {
+  score = 0;
+  timeLeft = 30;
+  isPlaying = true;
+  updateStats();
+  startBtn.classList.add('hidden');
+  restartBtn.classList.add('hidden');
+  finalScoreEl.classList.add('hidden');
+  targetBtn.classList.remove('hidden');
+  moveTarget();
+
+  timerId = setInterval(() => {
+    timeLeft--;
+    updateStats();
+    if (timeLeft <= 0) {
+      endGame();
+    }
+  }, 1000);
+}
+
+function endGame() {
+  clearInterval(timerId);
+  isPlaying = false;
+  targetBtn.classList.add('hidden');
+  finalScoreValue.textContent = score;
+  finalScoreEl.classList.remove('hidden');
+  restartBtn.classList.remove('hidden');
+}
+
+targetBtn.addEventListener('click', (e) => {
+  if (!isPlaying) return;
+  e.stopPropagation();
+  score++;
+  updateStats();
+  moveTarget();
+});
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+</script>
+</body>
+</html>

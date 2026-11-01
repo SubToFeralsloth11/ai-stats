@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Button Game</title>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f0f4f8;
+  }
+  h1 { margin: 16px 0 8px; }
+  #hud {
+    font-size: 1.3em;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 32px;
+  }
+  #field {
+    position: relative;
+    width: 600px;
+    max-width: 95vw;
+    height: 400px;
+    background: #fff;
+    border: 2px solid #334;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  #target {
+    position: absolute;
+    width: 90px;
+    height: 50px;
+    font-size: 16px;
+    cursor: pointer;
+    display: none;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.92);
+  }
+  #overlay.hidden { display: none; }
+  #message { font-size: 1.4em; text-align: center; padding: 0 16px; }
+  button.main { font-size: 20px; padding: 10px 24px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Button Game</h1>
+<div id="hud">
+  <span>Score: <strong id="score">0</strong></span>
+  <span>Time left: <strong id="time">30</strong>s</span>
+</div>
+<div id="field">
+  <button id="target">Click me!</button>
+  <div id="overlay">
+    <div id="message">Hit the target as many times as you can in 30 seconds.</div>
+    <button class="main" id="action">Start</button>
+  </div>
+</div>
+<script>
+  const ROUND_SECONDS = 30;
+
+  const field = document.getElementById('field');
+  const target = document.getElementById('target');
+  const overlay = document.getElementById('overlay');
+  const message = document.getElementById('message');
+  const action = document.getElementById('action');
+  const scoreEl = document.getElementById('score');
+  const timeEl = document.getElementById('time');
+
+  let score = 0;
+  let timeLeft = ROUND_SECONDS;
+  let timer = null;
+
+  function moveTarget() {
+    const maxX = field.clientWidth - target.offsetWidth;
+    const maxY = field.clientHeight - target.offsetHeight;
+    target.style.left = Math.floor(Math.random() * maxX) + 'px';
+    target.style.top = Math.floor(Math.random() * maxY) + 'px';
+  }
+
+  function startRound() {
+    score = 0;
+    timeLeft = ROUND_SECONDS;
+    scoreEl.textContent = score;
+    timeEl.textContent = timeLeft;
+    overlay.classList.add('hidden');
+    target.style.display = 'block';
+    moveTarget();
+    clearInterval(timer);
+    timer = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    timeLeft--;
+    timeEl.textContent = timeLeft;
+    if (timeLeft <= 0) endRound();
+  }
+
+  function endRound() {
+    clearInterval(timer);
+    timer = null;
+    target.style.display = 'none';
+    message.textContent = "Time's up! Final score: " + score;
+    action.textContent = 'Play again';
+    overlay.classList.remove('hidden');
+  }
+
+  target.addEventListener('click', () => {
+    if (!timer) return;
+    score++;
+    scoreEl.textContent = score;
+    moveTarget();
+  });
+
+  action.addEventListener('click', startRound);
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Button Game</title>
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #1e1e2e;
+    color: #f0f0f0;
+  }
+
+  h1 { margin: 16px 0 8px; }
+
+  #hud {
+    display: flex;
+    gap: 32px;
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+
+  #arena {
+    position: relative;
+    width: 640px;
+    max-width: 95vw;
+    height: 420px;
+    background: #2a2a3d;
+    border: 2px solid #4a4a6a;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  #target {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: none;
+    border-radius: 50%;
+    background: #e94560;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #target:active { background: #ff6b81; }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    font-size: 1.3rem;
+    text-align: center;
+  }
+
+  #overlay p { margin: 0; }
+
+  .action {
+    padding: 10px 28px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 6px;
+    background: #4ecca3;
+    color: #1e1e2e;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .action:hover { background: #6fe0b9; }
+</style>
+</head>
+<body>
+  <h1>Button Game</h1>
+
+  <div id="hud">
+    <div>Score: <span id="score">0</span></div>
+    <div>Time: <span id="time">30</span>s</div>
+  </div>
+
+  <div id="arena">
+    <button id="target" type="button" hidden>Click!</button>
+
+    <div id="overlay">
+      <p id="message">Click Start to begin a 30-second round.</p>
+      <button id="start" class="action" type="button">Start</button>
+      <button id="again" class="action" type="button" hidden>Play again</button>
+    </div>
+  </div>
+
+<script>
+  const ROUND_MS = 30000;
+  const EDGE_MARGIN = 8;
+
+  const arena = document.getElementById('arena');
+  const target = document.getElementById('target');
+  const scoreEl = document.getElementById('score');
+  const timeEl = document.getElementById('time');
+  const overlay = document.getElementById('overlay');
+  const messageEl = document.getElementById('message');
+  const startBtn = document.getElementById('start');
+  const againBtn = document.getElementById('again');
+
+  let score = 0;
+  let running = false;
+  let endTime = 0;
+  let timerId = null;
+
+  // Move the target to a random spot inside the arena, away from its current spot.
+  function placeTarget() {
+    const size = target.offsetWidth;
+    const maxX = arena.clientWidth - size - EDGE_MARGIN;
+    const maxY = arena.clientHeight - size - EDGE_MARGIN;
+    const prevX = target.offsetLeft;
+    const prevY = target.offsetTop;
+
+    let x, y, tries = 0;
+    do {
+      x = EDGE_MARGIN + Math.random() * (maxX - EDGE_MARGIN);
+      y = EDGE_MARGIN + Math.random() * (maxY - EDGE_MARGIN);
+      tries++;
+    } while (
+      Math.abs(x - prevX) < size &&
+      Math.abs(y - prevY) < size &&
+      tries < 20
+    );
+
+    target.style.left = Math.round(x) + 'px';
+    target.style.top = Math.round(y) + 'px';
+  }
+
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    timeEl.textContent = remaining;
+    if (remaining <= 0) {
+      endRound();
+    }
+  }
+
+  function startRound() {
+    clearInterval(timerId);
+    score = 0;
+    scoreEl.textContent = score;
+    timeEl.textContent = 30;
+
+    overlay.hidden = true;
+    target.hidden = false;
+    placeTarget();
+
+    running = true;
+    endTime = Date.now() + ROUND_MS;
+    timerId = setInterval(tick, 100);
+  }
+
+  function endRound() {
+    running = false;
+    clearInterval(timerId);
+    timerId = null;
+
+    timeEl.textContent = 0;
+    target.hidden = true;
+
+    messageEl.textContent = `Time's up! Final score: ${score}`;
+    startBtn.hidden = true;
+    againBtn.hidden = false;
+    overlay.hidden = false;
+  }
+
+  target.addEventListener('click', () => {
+    if (!running) return;
+    score++;
+    scoreEl.textContent = score;
+    placeTarget();
+  });
+
+  startBtn.addEventListener('click', startRound);
+  againBtn.addEventListener('click', startRound);
+</script>
+</body>
+</html>
